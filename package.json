@@ -1,0 +1,37 @@
+{
+  "name": "ai-coding-agent",
+  "version": "0.1.0",
+  "description": "AI coding agent — scratch-built, TypeScript, multi-provider (OpenAI / DeepSeek / MiniMax / Kimi)",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "npx tsx src/index.ts",
+    "dev": "npx tsx --watch src/index.ts",
+    "minimax": "LLM_PROVIDER=minimax npx tsx src/index.ts",
+    "openai": "LLM_PROVIDER=openai npx tsx src/index.ts",
+    "deepseek": "LLM_PROVIDER=deepseek npx tsx src/index.ts",
+    "kimi": "LLM_PROVIDER=kimi npx tsx src/index.ts",
+    "build": "npx tsc",
+    "typecheck": "npx tsc --noEmit"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "coding-agent",
+    "openai",
+    "deepseek",
+    "minimax",
+    "kimi",
+    "typescript"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  }
+}
