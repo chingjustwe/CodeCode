@@ -14,12 +14,12 @@
 import * as readline from "node:readline/promises";
 import "dotenv/config";
 import { stdin as input, stdout as output } from "node:process";
-import { BaseMessage } from "../types/messages.js";
 import { ChatModel } from "../types/index.js";
 import { agentLoop } from "../agent/loop.js";
 import { ToolRegistry } from "../agent/tools/tool-registry.js";
 import { commandRegistry } from "../agent/commands/command-registry.js";
 import { printAvailableProviders } from "../llm/factory.js";
+import { historyRef } from "../agent/history-ref.js";
 
 const rl = readline.createInterface({ input, output });
 
@@ -61,7 +61,7 @@ export async function startRepl(
   console.log("║  Type 'exit' or Ctrl+C to quit                   ║");
   console.log("╚════════════════════════════════════════════════════╝");
 
-  let history: BaseMessage[] = [];
+  historyRef.current = [];
 
   while (true) {
     const userInput = await rl.question("\nYou: ");
@@ -69,8 +69,8 @@ export async function startRepl(
 
     if (await handleCommand(userInput)) continue;
 
-    const result = await agentLoop(userInput, model, tools, history);
-    history = result.history;
+    const result = await agentLoop(userInput, model, tools, historyRef.current);
+    historyRef.current = result.history;
   }
 
   rl.close();

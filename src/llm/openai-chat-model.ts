@@ -12,24 +12,27 @@
  * Used by: `src/llm/factory.ts` when `apiFramework === "openai"`
  */
 import { HumanMessage, AIMessage, SystemMessage, BaseMessage } from "../types/messages.js";
-import type { ChatCompletionParams, ChatCompletionResult, ToolCall, ToolDefinition, ChatModel } from "../types/index.js";
+import type { ChatCompletionParams, ChatCompletionResult, TokenUsage, ToolCall, ToolDefinition, ChatModel } from "../types/index.js";
 
 export class OpenAIChatModel implements ChatModel {
   private apiKey: string;
   private endpoint: string;
   public modelName: string;
   public temperature: number;
+  public contextWindow: number;
 
   constructor(config: {
     apiKey: string;
     endpoint: string;
     model: string;
     temperature?: number;
+    contextWindow?: number;
   }) {
     this.apiKey = config.apiKey;
     this.endpoint = config.endpoint;
     this.modelName = config.model;
     this.temperature = config.temperature ?? 0;
+    this.contextWindow = config.contextWindow ?? 128000;
   }
 
   /**
@@ -105,7 +108,7 @@ export class OpenAIChatModel implements ChatModel {
       model: this.modelName,
       messages: this.formatMessages(params.messages),
       temperature: params.temperature ?? this.temperature,
-      max_tokens: params.maxTokens ?? 4096,
+      max_tokens: params.maxTokens ?? 4096, // TODO: make this configurable
     };
 
     // If a system prompt is provided, prepend it as a system message
@@ -151,8 +154,15 @@ export class OpenAIChatModel implements ChatModel {
       };
     }
 
+    interface OpenAIUsage {
+      prompt_tokens: number;
+      completion_tokens: number;
+      total_tokens: number;
+    }
+
     const data = (await response.json()) as {
       choices: OpenAIChoice[];
+      usage?: OpenAIUsage;
     };
 
     const choice = data.choices?.[0];
@@ -163,9 +173,19 @@ export class OpenAIChatModel implements ChatModel {
     const content = choice.message.content || ' ';
     const toolCalls = this.parseToolCalls(choice.message.tool_calls);
 
+    let usage: TokenUsage | undefined;
+    if (data.usage) {
+      usage = {
+        inputTokens: data.usage.prompt_tokens,
+        outputTokens: data.usage.completion_tokens,
+        totalTokens: data.usage.total_tokens,
+      };
+    }
+
     return {
       message: new AIMessage(content),
       toolCalls,
+      usage,
     };
   }
 }

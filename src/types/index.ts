@@ -7,6 +7,7 @@
  * Defines shared interfaces/types used across all layers (LLM, agent, tools):
  * - `ApiFramework`, `ProviderConfig` — LLM provider configuration
  * - `ToolParameterProperty`, `ToolDefinition`, `ToolCall`, `Tool` — tool system
+ * - `TokenUsage` — token usage statistics from LLM API calls
  * - `ChatCompletionParams`, `ChatCompletionResult`, `ChatModel` — model abstraction
  * - `AgentResult` — agent loop output
  *
@@ -24,6 +25,13 @@ export type { BaseMessage, HumanMessage, AIMessage, SystemMessage };
 /** Which API framework this provider uses */
 export type ApiFramework = "openai" | "anthropic";
 
+/** Token usage statistics from an LLM API call */
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+}
+
 /** Configuration for a single LLM provider */
 export interface ProviderConfig {
   endpoint: string;
@@ -31,6 +39,7 @@ export interface ProviderConfig {
   envKey: string;
   apiFramework: ApiFramework;
   temperature?: number;
+  contextWindow?: number;
 }
 
 /**
@@ -85,6 +94,7 @@ export interface ChatCompletionParams {
 export interface ChatCompletionResult {
   message: AIMessage;
   toolCalls: ToolCall[];
+  usage?: TokenUsage;
 }
 
 /**
@@ -107,5 +117,6 @@ export interface AgentResult {
  */
 export interface ChatModel {
   modelName: string;
+  contextWindow: number;
   invoke(params: ChatCompletionParams): Promise<ChatCompletionResult>;
 }

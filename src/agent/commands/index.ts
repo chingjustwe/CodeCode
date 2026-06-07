@@ -12,10 +12,12 @@
  */
 import { commandRegistry } from "./command-registry.js";
 import { HelpCommand } from "./help.js";
+import { CompactCommand } from "./compact.js";
 
 export { HelpCommand } from "./help.js";
+export { CompactCommand } from "./compact.js";
 
-const builtinCommands = [new HelpCommand()];
+const builtinCommands = [new HelpCommand(), new CompactCommand()];
 
 for (const cmd of builtinCommands) {
   commandRegistry.register(cmd);

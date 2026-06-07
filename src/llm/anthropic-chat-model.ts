@@ -11,13 +11,14 @@
  * Used by: `src/llm/factory.ts` when `apiFramework === "anthropic"`
  */
 import { HumanMessage, AIMessage, BaseMessage } from "../types/messages.js";
-import type { ChatCompletionParams, ChatCompletionResult, ToolCall, ChatModel } from "../types/index.js";
+import type { ChatCompletionParams, ChatCompletionResult, TokenUsage, ToolCall, ChatModel } from "../types/index.js";
 
 export class AnthropicChatModel implements ChatModel {
   private apiKey: string;
   private endpoint: string;
   public modelName: string;
   public temperature: number;
+  public contextWindow: number;
 
   /** Anthropic API version header value */
   private apiVersion: string;
@@ -27,12 +28,14 @@ export class AnthropicChatModel implements ChatModel {
     endpoint: string;
     model: string;
     temperature?: number;
+    contextWindow?: number;
     apiVersion?: string;
   }) {
     this.apiKey = config.apiKey;
     this.endpoint = config.endpoint;
     this.modelName = config.model;
     this.temperature = config.temperature ?? 0;
+    this.contextWindow = config.contextWindow ?? 200000;
     this.apiVersion = config.apiVersion ?? "2023-06-01";
   }
 
@@ -89,6 +92,10 @@ export class AnthropicChatModel implements ChatModel {
       input?: Record<string, unknown>;
     }>;
     stop_reason?: string;
+    usage?: {
+      input_tokens: number;
+      output_tokens: number;
+    };
   }): ChatCompletionResult {
     // Extract text content
     const textBlocks = data.content.filter((c) => c.type === "text");
@@ -103,9 +110,19 @@ export class AnthropicChatModel implements ChatModel {
         arguments: c.input ?? {},
       }));
 
+    let usage: TokenUsage | undefined;
+    if (data.usage) {
+      usage = {
+        inputTokens: data.usage.input_tokens,
+        outputTokens: data.usage.output_tokens,
+        totalTokens: data.usage.input_tokens + data.usage.output_tokens,
+      };
+    }
+
     return {
       message: new AIMessage(textContent),
       toolCalls,
+      usage,
     };
   }
 
@@ -169,6 +186,10 @@ export class AnthropicChatModel implements ChatModel {
         input?: Record<string, unknown>;
       }>;
       stop_reason?: string;
+      usage?: {
+        input_tokens: number;
+        output_tokens: number;
+      };
     };
 
     return this.parseResponse(data);

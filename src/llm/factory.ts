@@ -3,8 +3,12 @@
  * instance. Dispatches to OpenAIChatModel or AnthropicChatModel based on the
  * provider's `apiFramework` field (not the provider name itself).
  *
+ * Global singleton `currentModel` is set by `createModel()` and exported
+ * for read-only access anywhere (e.g. slash commands that need summarization).
+ *
  * Exports:
- * - `createModel()` — factory function, reads config from env vars
+ * - `createModel()` — factory function, reads config from env vars, sets `currentModel`
+ * - `currentModel` — global ChatModel singleton (null until `createModel()` is called)
  * - `printAvailableProviders()` — logs all registered provider names
  *
  * Dependencies:
@@ -19,6 +23,9 @@ import { AnthropicChatModel } from "./anthropic-chat-model.js";
 import { getProvider, listProviders } from "./providers.js";
 import type { ChatModel, ApiFramework } from "../types/index.js";
 
+/** Global ChatModel singleton, set by `createModel()`. Read-only after bootstrap. */
+export let currentModel: ChatModel | null = null;
+
 /**
  * Create a ChatModel instance based on environment variables.
  *
@@ -30,6 +37,7 @@ import type { ChatModel, ApiFramework } from "../types/index.js";
  *   LLM_PROVIDER  — provider name (default: "anthropic")
  *   LLM_API_KEY   — fallback API key for any provider
  *   LLM_MODEL     — override the default model name
+ *   LLM_CONTEXT_WINDOW — override the model's context window size (for token % display)
  *   {PROVIDER}_API_KEY — provider-specific key (e.g. OPENAI_API_KEY)
  */
 export function createModel(): ChatModel {
@@ -48,14 +56,19 @@ export function createModel(): ChatModel {
 
   const temperature = Number(process.env.LLM_TEMPERATURE ?? provider.temperature ?? 0);
 
-  console.log(`  🔧 Model: ${providerName}/${modelName}`);
+  const contextWindow = Number(process.env.LLM_CONTEXT_WINDOW ?? provider.contextWindow ?? 128000);
 
-  return createModelForFramework(provider.apiFramework, {
+  console.log(`  🔧 Model: ${providerName}/${modelName}  (ctx: ${(contextWindow / 1000).toFixed(0)}K)`);
+
+  const instance = createModelForFramework(provider.apiFramework, {
     apiKey,
     endpoint: provider.endpoint,
     model: modelName,
     temperature,
+    contextWindow,
   });
+  currentModel = instance;
+  return instance;
 }
 
 /**
@@ -63,7 +76,7 @@ export function createModel(): ChatModel {
  */
 function createModelForFramework(
   framework: ApiFramework,
-  config: { apiKey: string; endpoint: string; model: string; temperature: number }
+  config: { apiKey: string; endpoint: string; model: string; temperature: number; contextWindow: number }
 ): ChatModel {
   switch (framework) {
     case "anthropic":
@@ -71,7 +84,6 @@ function createModelForFramework(
     case "openai":
       return new OpenAIChatModel(config);
     default: {
-      // Exhaustiveness check — if you add a new framework, TS will error here
       const _exhaustive: never = framework;
       throw new Error(`Unknown API framework: ${_exhaustive}`);
     }

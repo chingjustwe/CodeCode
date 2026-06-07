@@ -48,6 +48,14 @@ When modifying an existing file, the agent MUST check whether the file's top-lev
 - Adding helper/utility functions that serve the existing purpose
 - Importing new dependencies for internal use (the dependency list in the comment is optional, not required)
 
+### General documentation check (MUST follow)
+
+Every code change MUST also consider whether `AGENTS.md` and `README.md` need corresponding updates:
+- If the change adds, removes, or renames a command, tool, provider, or skill — update the relevant section in `AGENTS.md`.
+- If the change affects how the project is set up, built, run, or deployed — update `README.md`.
+- If the change introduces a new architectural concept or modifies an existing one (e.g., agent loop behavior, prompt construction, sandboxing rules) — ensure `AGENTS.md` reflects it.
+- If neither file needs changes, no action required — but the agent MUST explicitly note this in its reasoning.
+
 ### Barrel files (`index.ts`)
 
 Barrel (re-export) files should have a comment listing what they re-export from, e.g.:
@@ -79,12 +87,23 @@ Barrel (re-export) files should have a comment listing what they re-export from,
 2. Add API key(s). `LLM_PROVIDER` selects the provider (default `anthropic`).
 3. `npm install && npm start`
 
+### Env vars
+
+| Var | Purpose |
+|---|---|
+| `LLM_PROVIDER` | Selects the provider (default `anthropic`) |
+| `LLM_MODEL` | Overrides the default model name |
+| `LLM_CONTEXT_WINDOW` | Overrides context window size for token % display |
+| `LLM_TEMPERATURE` | Overrides the default temperature |
+| `LLM_API_KEY` | Fallback API key (takes priority over provider-specific) |
+| `{PROVIDER}_API_KEY` | Provider-specific API key |
+
 ## Architecture (not obvious from filenames)
 
 - **Provider dispatch**: by `apiFramework` field (`"openai"` | `"anthropic"`), not by provider name. Adding a provider config in `src/llm/providers.ts` is enough — no new class needed if framework is already supported.
 - **Tool definition**: each entry in `src/agent/tools/` has a JSON Schema `definition` + runtime `fn`. Tools reachable from `getToolDefinitions()` / the `tools` record. Tools are organized by category — e.g. `src/agent/tools/todo/` contains both `todo.ts` (manager) and `todo-tool.ts` (tool class).
 - **Skill system**: skills live at `.agents/skills/<name>/SKILL.md`. Optional YAML frontmatter (`name:`, `description:`). Loaded by `SkillRegistry` at startup — subdirs without `SKILL.md` are ignored.
-- **Agent loop** (`src/agent/loop.ts`): max 20 iterations, 8096 max_tokens per call. Tool results fed back as `HumanMessage` (no `ToolMessage` type used — matches OpenAI's user-message convention).
+- **Agent loop** (`src/agent/loop.ts`): max 20 iterations, 8096 max_tokens per call. Tool results fed back as `HumanMessage` (no `ToolMessage` type used — matches OpenAI's user-message convention). After each turn, accumulated token usage (input + output + % of context window) is printed to console.
 - **System prompt** (`src/agent/prompt.ts`): dynamically includes available skill descriptions. Not a static string.
 - **File sandboxing**: `safePath()` in `src/utils/file-utils.ts` resolves paths relative to `cwd()` and rejects traversal (`../../etc`).
 
@@ -96,6 +115,7 @@ Barrel (re-export) files should have a comment listing what they re-export from,
 - `calculate` uses sanitized `eval` — only `0-9+\-*/.() ` characters pass through.
 - No tests, no linter, no formatter configured. `typecheck` is the sole quality gate.
 - `.env` is gitignored.
+- `LLM_CONTEXT_WINDOW` overrides the model's context window for token % display.
 
 ## Adding a Provider
 

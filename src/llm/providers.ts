@@ -26,18 +26,21 @@ export const PROVIDERS: Record<string, ProviderConfig> = {
     defaultModel: "gpt-4o-mini",
     envKey: "OPENAI_API_KEY",
     apiFramework: "openai",
+    contextWindow: 128000,
   },
   deepseek: {
     endpoint: "https://api.deepseek.com/v1",
     defaultModel: "deepseek-chat",
     envKey: "DEEPSEEK_API_KEY",
     apiFramework: "openai",
+    contextWindow: 128000,
   },
   minimax: {
     endpoint: "https://api.minimax.chat/v1",
     defaultModel: "MiniMax-M2.5",
     envKey: "MINIMAX_API_KEY",
     apiFramework: "openai",
+    contextWindow: 128000,
   },
   glm: {
     // GLM (Zhipu AI) uses an OpenAI-compatible API
@@ -45,20 +48,23 @@ export const PROVIDERS: Record<string, ProviderConfig> = {
     defaultModel: "glm-4-plus",
     envKey: "GLM_API_KEY",
     apiFramework: "openai",
+    contextWindow: 128000,
   },
   kimi: {
     // Kimi (Moonshot) uses an OpenAI-compatible API
     endpoint: "https://api.moonshot.cn/v1",
-    defaultModel: "moonshot-v1-8k",
+    defaultModel: "kimi-k2.5",
     envKey: "KIMI_API_KEY",
     apiFramework: "openai",
     temperature: 1, // Kimi's models are often better with a bit more temperature
+    contextWindow: 128000,
   },
   anthropic: {
     endpoint: "https://api.anthropic.com/v1",
     defaultModel: "claude-sonnet-4-20250514",
     envKey: "ANTHROPIC_API_KEY",
     apiFramework: "anthropic",
+    contextWindow: 200000,
   },
   // "claude" is an alias for "anthropic"
   claude: {
@@ -66,6 +72,7 @@ export const PROVIDERS: Record<string, ProviderConfig> = {
     defaultModel: "claude-sonnet-4-20250514",
     envKey: "ANTHROPIC_API_KEY",
     apiFramework: "anthropic",
+    contextWindow: 200000,
   },
 };
 
