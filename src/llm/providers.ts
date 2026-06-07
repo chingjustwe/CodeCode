@@ -28,6 +28,13 @@ export const PROVIDERS: Record<string, ProviderConfig> = {
     envKey: "MINIMAX_API_KEY",
     apiFramework: "openai",
   },
+  glm: {
+    // GLM (Zhipu AI) uses an OpenAI-compatible API
+    endpoint: "https://open.bigmodel.cn/api/paas/v4",
+    defaultModel: "glm-4-plus",
+    envKey: "GLM_API_KEY",
+    apiFramework: "openai",
+  },
   kimi: {
     // Kimi (Moonshot) uses an OpenAI-compatible API
     endpoint: "https://api.moonshot.cn/v1",

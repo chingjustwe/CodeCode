@@ -10,6 +10,7 @@
     "openai": "LLM_PROVIDER=openai npx tsx src/index.ts",
     "deepseek": "LLM_PROVIDER=deepseek npx tsx src/index.ts",
     "kimi": "LLM_PROVIDER=kimi npx tsx src/index.ts",
+    "glm": "LLM_PROVIDER=glm npx tsx src/index.ts",
     "build": "npx tsc",
     "typecheck": "npx tsc --noEmit"
   },
@@ -21,6 +22,7 @@
     "deepseek",
     "minimax",
     "kimi",
+    "glm",
     "typescript"
   ],
   "author": "",

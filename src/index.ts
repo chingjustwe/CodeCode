@@ -19,10 +19,14 @@
 import { createModel } from "./llm/factory.js";
 import { tools } from "./agent/tools.js";
 import { startRepl } from "./cli/repl.js";
+import { registerLoopListener } from "./agent/hooks.js";
+import { todoManager } from "./agent/todo.js";
 
 // ─── Bootstrap ─────────────────────────────────────────────────────────────
 
 const model = createModel();
+
+registerLoopListener(todoManager);
 
 // ─── Start ─────────────────────────────────────────────────────────────────
 

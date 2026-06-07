@@ -3,6 +3,7 @@ import { resolve } from "path";
 import { cwd } from "process";
 import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import { defaultRegistry } from "./skill-registry.js";
+import { todoManager, type RawPlanItem } from "./todo.js";
 
 // ─── Built-in Tools ────────────────────────────────────────────────────────
 
@@ -122,6 +123,18 @@ function readFile(args: { path: string; limit?: number }): string {
 function loadSkill(args: { name: string }): string {
   console.log(`  🛠️  Tool called: load_skill(${JSON.stringify(args)})`);
   return defaultRegistry.loadFullText(args.name);
+}
+
+function updateTodo(args: { items: RawPlanItem[] }): string {
+  console.log(`  🛠️  Tool called: todo(${JSON.stringify({ count: args.items.length })})`);
+  try {
+    const rendered = todoManager.update(args.items);
+    console.log(`\n📋 Plan:\n${rendered}\n`);
+    return JSON.stringify({ items: todoManager.items, rounds_since_update: todoManager.roundsSinceUpdate });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return `Error: ${message}`;
+  }
 }
 
 // ─── Tool Registry ─────────────────────────────────────────────────────────
@@ -245,6 +258,38 @@ export const tools: Record<string, Tool> = {
       },
     },
     fn: (args: unknown) => editFile(args as { path: string; old_text: string; new_text: string }),
+  },
+  todo: {
+    definition: {
+      name: "todo",
+      description: "Update the current session plan for multi-step work. Use this to create, update, or rewrite the todo list. Only one item can be in_progress at a time.",
+      input_schema: {
+        type: "object",
+        properties: {
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                content: { type: "string", description: "Short description of the task step" },
+                status: {
+                  type: "string",
+                  enum: ["pending", "in_progress", "completed"],
+                  description: "pending = not started, in_progress = currently working, completed = done",
+                },
+                activeForm: {
+                  type: "string",
+                  description: "Optional present-continuous label shown while the step is in progress",
+                },
+              },
+              required: ["content", "status"],
+            },
+          },
+        },
+        required: ["items"],
+      },
+    },
+    fn: (args: unknown) => updateTodo(args as { items: RawPlanItem[] }),
   },
 };
 

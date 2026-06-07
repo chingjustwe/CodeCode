@@ -22,5 +22,12 @@ Use load_skill when a task needs specialized instructions before you act.
 Skills available:
 ${skillsDesc}
 
+When a task has multiple steps, use the "todo" tool to write out a plan
+before starting work. Update the plan after each step:
+  - Set the current step to "in_progress" when you begin it.
+  - Set it to "completed" when finished, and mark the next step "in_progress".
+  - Only one item may be "in_progress" at a time.
+This lets the user see your progress in real time.
+
 Be concise and direct. If you need to use a tool, call it. If you don't need a tool, answer directly.`;
 }

@@ -13,6 +13,7 @@ Entry: `src/index.ts` → `createModel()` → `startRepl()` → `agentLoop()`.
 | `npm run deepseek` | Same pattern for DeepSeek |
 | `npm run minimax` | Same pattern for MiniMax |
 | `npm run kimi` | Same pattern for Kimi |
+| `npm run glm` | Same pattern for GLM |
 | `npm run typecheck` | `tsc --noEmit` — the **only** verification (no tests, no linter, no formatter) |
 | `npm run build` | `tsc` → `dist/` |
 
