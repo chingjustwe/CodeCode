@@ -17,10 +17,11 @@
  */
 
 import { createModel } from "./llm/factory.js";
-import { tools } from "./agent/tools.js";
+import { toolRegistry } from "./agent/tool-registry.js";
+import "./agent/tools/index.js";
 import { startRepl } from "./cli/repl.js";
 import { registerLoopListener } from "./agent/hooks.js";
-import { todoManager } from "./agent/todo.js";
+import { todoManager } from "./agent/tools/todo/todo.js";
 
 // ─── Bootstrap ─────────────────────────────────────────────────────────────
 
@@ -30,4 +31,4 @@ registerLoopListener(todoManager);
 
 // ─── Start ─────────────────────────────────────────────────────────────────
 
-startRepl(model, tools).catch(console.error);
+startRepl(model, toolRegistry).catch(console.error);

@@ -91,7 +91,7 @@ export class AnthropicChatModel implements ChatModel {
   }): ChatCompletionResult {
     // Extract text content
     const textBlocks = data.content.filter((c) => c.type === "text");
-    const textContent = textBlocks.map((b) => b.text ?? "").join("");
+    const textContent = textBlocks.map((b) => b.text || " ").join("");
 
     // Extract tool calls
     const toolCalls: ToolCall[] = data.content

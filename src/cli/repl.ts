@@ -2,8 +2,9 @@ import * as readline from "node:readline/promises";
 import "dotenv/config";
 import { stdin as input, stdout as output } from "node:process";
 import { BaseMessage } from "../types/messages.js";
-import { ChatModel, Tool } from "../types/index.js";
+import { ChatModel } from "../types/index.js";
 import { agentLoop } from "../agent/loop.js";
+import { ToolRegistry } from "../agent/tool-registry.js";
 import { printAvailableProviders } from "../llm/factory.js";
 
 const rl = readline.createInterface({ input, output });
@@ -14,7 +15,7 @@ const rl = readline.createInterface({ input, output });
  */
 export async function startRepl(
   model: ChatModel,
-  tools: Record<string, Tool>
+  tools: ToolRegistry
 ): Promise<void> {
   console.log("╔════════════════════════════════════════════════════╗");
   console.log("║       LangChain.js Hello World Agent (TS)         ║");

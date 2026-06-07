@@ -1,7 +1,7 @@
 import { HumanMessage, AIMessage, BaseMessage } from "../types/messages.js";
 import { Tool, AgentResult, ChatModel } from "../types/index.js";
 import { buildSystemPrompt } from "./prompt.js";
-import { getToolDefinitions } from "./tools.js";
+import { ToolRegistry } from "./tool-registry.js";
 import { getLoopListeners } from "./hooks.js";
 import type { ToolCallInfo } from "./hooks.js";
 
@@ -11,11 +11,11 @@ const MAX_TOKENS = 8096;
 export async function agentLoop(
   userInput: string,
   model: ChatModel,
-  toolsRegistry: Record<string, Tool>,
+  toolsRegistry: ToolRegistry,
   messageHistory: BaseMessage[] = []
 ): Promise<AgentResult> {
   const systemPrompt = buildSystemPrompt();
-  const toolDefs = getToolDefinitions();
+  const toolDefs = toolsRegistry.definitions();
   const listeners = getLoopListeners();
 
   const messages: BaseMessage[] = [
@@ -55,23 +55,19 @@ export async function agentLoop(
       return { answer: content, history: messageHistory };
     }
 
-    const assistantMsg = result.message;
-    if (!assistantMsg.content) {
-      assistantMsg.content = " ";
-    }
-    messages.push(assistantMsg);
+    messages.push(result.message);
 
     const toolCallInfos: ToolCallInfo[] = [];
 
     for (const toolCall of result.toolCalls) {
-      const tool = toolsRegistry[toolCall.name];
+      const tool = toolsRegistry.get(toolCall.name);
 
       if (!tool) {
         console.log(`  ⚠️  Unknown tool: "${toolCall.name}"`);
         toolCallInfos.push({ name: toolCall.name, success: false });
         messages.push(
           new HumanMessage(
-            `Error: Tool "${toolCall.name}" not found. Available: ${Object.keys(toolsRegistry).join(", ")}.`
+            `Error: Tool "${toolCall.name}" not found. Available: ${toolsRegistry.list().join(", ")}.`
           )
         );
         continue;

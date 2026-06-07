@@ -159,7 +159,7 @@ export class OpenAIChatModel implements ChatModel {
       throw new Error(`[${this.modelName}] API returned no choices`);
     }
 
-    const content = choice.message.content ?? "";
+    const content = choice.message.content || ' ';
     const toolCalls = this.parseToolCalls(choice.message.tool_calls);
 
     return {

@@ -1,4 +1,4 @@
-import type { LoopListener, RoundContext, ToolCallInfo } from "./hooks.js";
+import type { LoopListener, RoundContext, ToolCallInfo } from "../../hooks.js";
 
 export type TodoStatus = "pending" | "in_progress" | "completed";
 

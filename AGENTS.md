@@ -26,11 +26,11 @@ Entry: `src/index.ts` → `createModel()` → `startRepl()` → `agentLoop()`.
 ## Architecture (not obvious from filenames)
 
 - **Provider dispatch**: by `apiFramework` field (`"openai"` | `"anthropic"`), not by provider name. Adding a provider config in `src/llm/providers.ts` is enough — no new class needed if framework is already supported.
-- **Tool definition**: each entry in `src/agent/tools.ts` has a JSON Schema `definition` + runtime `fn`. Tools reachable from `getToolDefinitions()` / the `tools` record.
+- **Tool definition**: each entry in `src/agent/tools/` has a JSON Schema `definition` + runtime `fn`. Tools reachable from `getToolDefinitions()` / the `tools` record. Tools are organized by category — e.g. `src/agent/tools/todo/` contains both `todo.ts` (manager) and `todo-tool.ts` (tool class).
 - **Skill system**: skills live at `.agents/skills/<name>/SKILL.md`. Optional YAML frontmatter (`name:`, `description:`). Loaded by `SkillRegistry` at startup — subdirs without `SKILL.md` are ignored.
 - **Agent loop** (`src/agent/loop.ts`): max 20 iterations, 8096 max_tokens per call. Tool results fed back as `HumanMessage` (no `ToolMessage` type used — matches OpenAI's user-message convention).
 - **System prompt** (`src/agent/prompt.ts`): dynamically includes available skill descriptions. Not a static string.
-- **File sandboxing**: `safePath()` in `src/agent/tools.ts` resolves paths relative to `cwd()` and rejects traversal (`../../etc`).
+- **File sandboxing**: `safePath()` in `src/utils/file-utils.ts` resolves paths relative to `cwd()` and rejects traversal (`../../etc`).
 
 ## Quirks & gotchas
 
@@ -47,4 +47,4 @@ Add an entry to `src/llm/providers.ts` specifying `endpoint`, `defaultModel`, `e
 
 ## Adding a Tool
 
-Add an entry to the `tools` record in `src/agent/tools.ts` with `definition` (JSON schema) and `fn` (implementation). The agent loop auto-includes it on the next API call.
+Create a new `.ts` file in `src/agent/tools/` (or a subdirectory if it belongs to a category) that exports a class extending `BaseTool`. Then register it in `src/agent/tools/index.ts`. The agent loop auto-includes it on the next API call.

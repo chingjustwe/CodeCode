@@ -65,10 +65,22 @@ npm run glm
 ```
 src/
 ├── index.ts              # Entry point
+├── utils/
+│   └── file-utils.ts     # File sandboxing utilities (safePath)
 ├── agent/
 │   ├── loop.ts           # Agent loop — orchestrates tool calls
 │   ├── prompt.ts         # System prompt builder
-│   └── tools.ts          # Tool registry & implementations
+│   └── tools/
+│       ├── index.ts      # Tool registry & exports
+│       ├── bash.ts       # Shell command execution
+│       ├── calculate.ts  # Mathematical expression evaluator
+│       ├── edit.ts       # File text replacement
+│       ├── load-skill.ts # Skill loader
+│       ├── read.ts       # File reader
+│       ├── write.ts      # File writer
+│       └── todo/         # Todo management (manager + tool)
+│           ├── todo.ts
+│           └── todo-tool.ts
 ├── cli/
 │   └── repl.ts           # Interactive REPL
 ├── llm/
@@ -85,7 +97,7 @@ src/
 
 1. The **agent loop** (`loop.ts`) sends the conversation + available tool definitions to the LLM
 2. The LLM responds with either a text reply or one or more **tool calls**
-3. If tool calls are requested, the loop executes them via the **tool registry** (`tools.ts`) and feeds results back to the LLM
+3. If tool calls are requested, the loop executes them via the **tool registry** (`tools/index.ts`) and feeds results back to the LLM
 4. This continues until the LLM produces a final text response
 
 ## Tools
@@ -97,6 +109,8 @@ src/
 | `read` | Read the contents of a file |
 | `write` | Write content to a file (creates parent dirs) |
 | `edit` | Replace the first occurrence of text in a file |
+| `load_skill` | Load a skill into the current context |
+| `todo` | Update the session plan for multi-step work |
 
 All file operations are sandboxed to the current workspace — paths that escape via `..` traversal are rejected.
 
