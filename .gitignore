@@ -2,3 +2,5 @@ node_modules/
 dist/
 .env
 .opencode/
+.task_outputs/
+**/transcripts/*

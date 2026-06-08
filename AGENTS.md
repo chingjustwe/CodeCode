@@ -41,6 +41,15 @@ When modifying an existing file, the agent MUST check whether the file's top-lev
 - Adding or removing significant dependencies
 - Refactoring that splits or merges logic across files
 
+### One class per file rule
+
+Every exported class MUST reside in its own file. A file may contain multiple functions, type
+aliases, interfaces, and constants — but if it exports a class, that class must be the sole
+exported class in the file. (Trivial helper classes used only within the same file are exempt.)
+
+Rationale: keeps the codebase navigable, makes git history per-class, and avoids merge conflicts
+when multiple classes in the same module change.
+
 ### What does NOT require comment review
 
 - Bug fixes that don't alter the module's public API or core purpose
@@ -105,6 +114,7 @@ Barrel (re-export) files should have a comment listing what they re-export from,
 - **Skill system**: skills live at `.agents/skills/<name>/SKILL.md`. Optional YAML frontmatter (`name:`, `description:`). Loaded by `SkillRegistry` at startup — subdirs without `SKILL.md` are ignored.
 - **Agent loop** (`src/agent/loop.ts`): max 20 iterations, 8096 max_tokens per call. Tool results fed back as `HumanMessage` (no `ToolMessage` type used — matches OpenAI's user-message convention). After each turn, accumulated token usage (input + output + % of context window) is printed to console.
 - **System prompt** (`src/agent/prompt.ts`): dynamically includes available skill descriptions. Not a static string.
+- **Context compression** (`src/agent/compact/index.ts`): three-layer compression applied via `CompactListener` (registered in `src/index.ts` as a loop listener). Layer 1 (`onBeforeToolResult`) writes large tool outputs (>4 KB) to `.task_outputs/tool-results/` with a preview in context. Layer 2 (`onRoundStart`) replaces all but the last 3 tool-result messages with `[Earlier tool result omitted for brevity]` at the start of each round. Layer 3 (used by `/compact`) produces an LLM continuity summary that replaces the full history. The output dirs are gitignored by default.
 - **File sandboxing**: `safePath()` in `src/utils/file-utils.ts` resolves paths relative to `cwd()` and rejects traversal (`../../etc`).
 
 ## Quirks & gotchas

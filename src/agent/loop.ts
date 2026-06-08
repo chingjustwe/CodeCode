@@ -16,10 +16,14 @@
  * - `../types/index.ts` — ChatModel, AgentResult, Tool types
  */
 import { HumanMessage, AIMessage, BaseMessage } from "../types/messages.js";
-import { Tool, AgentResult, ChatModel, TokenUsage } from "../types/index.js";
+import { AgentResult, ChatModel, TokenUsage } from "../types/index.js";
 import { buildSystemPrompt } from "./prompt.js";
 import { ToolRegistry } from "./tools/tool-registry.js";
-import { getLoopListeners } from "./hooks.js";
+import {
+  fireRoundStartHooks,
+  applyBeforeToolResultHooks,
+  fireRoundEndHooks,
+} from "./hooks.js";
 import type { ToolCallInfo } from "./hooks.js";
 
 const MAX_ITERATIONS = 20;
@@ -39,7 +43,6 @@ export async function agentLoop(
 ): Promise<AgentResult> {
   const systemPrompt = buildSystemPrompt();
   const toolDefs = toolsRegistry.definitions();
-  const listeners = getLoopListeners();
 
   const messages: BaseMessage[] = [
     ...messageHistory,
@@ -51,14 +54,9 @@ export async function agentLoop(
   let totalUsage: TokenUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
-    const ctx = { roundIndex: i, maxRounds: MAX_ITERATIONS, messageCount: messages.length };
+    const ctx = { roundIndex: i, maxRounds: MAX_ITERATIONS, messageCount: messages.length, messages };
 
-    for (const listener of listeners) {
-      const injection = listener.onRoundStart?.(ctx);
-      if (injection) {
-        messages.push(new HumanMessage(injection));
-      }
-    }
+    fireRoundStartHooks(ctx, messages);
 
     const result = await model.invoke({
       system: systemPrompt,
@@ -120,16 +118,16 @@ export async function agentLoop(
 
       console.log(`  👁️  Observation: ${observation.substring(0, 200)}${observation.length > 200 ? "..." : ""}`);
 
+      const displayObservation = applyBeforeToolResultHooks(toolCall.id, toolCall.name, observation);
+
       messages.push(
         new HumanMessage(
-          `Tool "${toolCall.name}" returned:\n${observation}`
+          `Tool "${toolCall.name}" returned:\n${displayObservation}`
         )
       );
     }
 
-    for (const listener of listeners) {
-      listener.onRoundEnd?.(ctx, toolCallInfos);
-    }
+    fireRoundEndHooks(ctx, toolCallInfos);
   }
 
   console.log("⚠️  Max iterations reached. Ending loop.");
