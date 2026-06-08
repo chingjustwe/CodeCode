@@ -24,9 +24,15 @@ export interface ToolCallInfo {
   success: boolean;
 }
 
+export interface BeforeToolCallResult {
+  allowed: boolean;
+  reason: string;
+}
+
 export interface LoopListener {
   onRoundStart?(ctx: RoundContext): string | null;
   onBeforeToolResult?(toolCallId: string, toolName: string, observation: string): string;
+  onBeforeToolCall?(toolName: string, args: Record<string, unknown>): BeforeToolCallResult | null | Promise<BeforeToolCallResult | null>;
   onRoundEnd?(ctx: RoundContext, toolCalls: ToolCallInfo[]): void;
 }
 
@@ -67,6 +73,20 @@ export function applyBeforeToolResultHooks(
     }
   }
   return result;
+}
+
+/** Run all onBeforeToolCall hooks. Returns the first veto, or a default allow. */
+export async function fireBeforeToolCallHooks(
+  toolName: string,
+  args: Record<string, unknown>,
+): Promise<BeforeToolCallResult> {
+  for (const listener of listeners) {
+    const result = await listener.onBeforeToolCall?.(toolName, args);
+    if (result && !result.allowed) {
+      return result;
+    }
+  }
+  return { allowed: true, reason: "" };
 }
 
 /** Run all onRoundEnd hooks. */

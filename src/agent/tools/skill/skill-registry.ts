@@ -1,5 +1,5 @@
 /**
- * Skill registry — scans `.agents/skills/` for subdirectories containing
+ * Skill registry — scans `{CODEDIR}/skills/` for subdirectories containing
  * `SKILL.md` files, parses YAML frontmatter, and provides lookup by name.
  * Used by the prompt builder to describe available skills and by the
  * `load_skill` tool to retrieve full skill text.
@@ -16,7 +16,7 @@
  */
 import { readFileSync, existsSync, readdirSync, statSync } from "fs";
 import { join } from "path";
-import { cwd } from "process";
+import { CODEDIR } from "../../../utils/constants.js";
 
 export interface SkillManifest {
   name: string;
@@ -34,7 +34,7 @@ export class SkillRegistry {
   private skillsDir: string;
 
   constructor(skillsDir?: string) {
-    this.skillsDir = skillsDir ?? join(cwd(), ".agents", "skills");
+    this.skillsDir = skillsDir ?? join(CODEDIR, "skills");
     this.loadAll();
   }
 

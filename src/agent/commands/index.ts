@@ -13,11 +13,13 @@
 import { commandRegistry } from "./command-registry.js";
 import { HelpCommand } from "./help.js";
 import { CompactCommand } from "./compact.js";
+import { ListPermRuleCommand } from "./list-perm-rule.js";
 
 export { HelpCommand } from "./help.js";
 export { CompactCommand } from "./compact.js";
+export { ListPermRuleCommand } from "./list-perm-rule.js";
 
-const builtinCommands = [new HelpCommand(), new CompactCommand()];
+const builtinCommands = [new HelpCommand(), new CompactCommand(), new ListPermRuleCommand()];
 
 for (const cmd of builtinCommands) {
   commandRegistry.register(cmd);

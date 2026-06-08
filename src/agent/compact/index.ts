@@ -24,13 +24,14 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { BaseMessage, HumanMessage } from "../../types/messages.js";
 import type { ChatModel } from "../../types/index.js";
+import { CODEDIR } from "../../utils/constants.js";
 // ─── Layer 1 — persist large tool outputs ─────────────────────────────────
 
 /** Outputs longer than this (characters) are saved to disk instead of inlined. */
 export const PERSIST_THRESHOLD = 4000; // TODO: determine a good threshold value through testing and iteration
 
-/** Directory where persisted outputs are stored. */
-const OUTPUT_DIR = path.resolve(".task_outputs/tool-results");
+/** Directory under CODEDIR where persisted outputs are stored. */
+const OUTPUT_DIR = path.join(CODEDIR, "tool-results");
 
 /** How many characters of the preview to include in the wrapper. */
 const PREVIEW_LENGTH = 2000; // TODO: determine a good preview length through testing and iteration
@@ -113,7 +114,7 @@ export function compactToolResults(
 
 // ─── Layer 3 — continuity summary (shared with /compact) ──────────────────
 
-const DEFAULT_TRANSCRIPT_DIR = path.resolve(".agents/transcripts");
+const DEFAULT_TRANSCRIPT_DIR = path.join(CODEDIR, "transcripts");
 
 /**
  * Save the current conversation to a JSONL transcript file.

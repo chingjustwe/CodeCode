@@ -33,6 +33,7 @@ import { startRepl } from "./cli/repl.js";
 import { registerLoopListener } from "./agent/hooks.js";
 import { todoManager } from "./agent/tools/todo/todo.js";
 import { compactListener } from "./agent/compact/compact-listener.js";
+import { permissionManager } from "./agent/permission-manager.js";
 
 // ─── Bootstrap ─────────────────────────────────────────────────────────────
 
@@ -40,6 +41,7 @@ const model = createModel();
 
 registerLoopListener(todoManager);
 registerLoopListener(compactListener);
+registerLoopListener(permissionManager);
 
 // ─── Start ─────────────────────────────────────────────────────────────────
 

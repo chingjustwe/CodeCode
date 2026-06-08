@@ -22,6 +22,7 @@ import { ToolRegistry } from "./tools/tool-registry.js";
 import {
   fireRoundStartHooks,
   applyBeforeToolResultHooks,
+  fireBeforeToolCallHooks,
   fireRoundEndHooks,
 } from "./hooks.js";
 import type { ToolCallInfo } from "./hooks.js";
@@ -74,10 +75,7 @@ export async function agentLoop(
     const content = result.message.content;
 
     if (result.toolCalls.length === 0) {
-      console.log(
-        `  🤖 Assistant: ${content.substring(0, 120)}${content.length > 120 ? "..." : ""}`
-      );
-      console.log(`\n✅ Final Answer: ${content}\n`);
+      console.log(`\n🤖 Assistant Final Answer: ${content}\n`);
 
       if (totalUsage.totalTokens > 0) {
         console.log(`  ${formatTokenInfo(totalUsage, model.contextWindow)}\n`);
@@ -103,6 +101,15 @@ export async function agentLoop(
             `Error: Tool "${toolCall.name}" not found. Available: ${toolsRegistry.list().join(", ")}.`
           )
         );
+        continue;
+      }
+
+      // ── Permission check ──────────────────────────────────────────
+      const { allowed, reason } = await fireBeforeToolCallHooks(toolCall.name, toolCall.arguments);
+      if (!allowed) {
+        console.log(`  ⛔ Tool "${toolCall.name}" blocked: ${reason}`);
+        toolCallInfos.push({ name: toolCall.name, success: false });
+        messages.push(new HumanMessage(reason));
         continue;
       }
 
