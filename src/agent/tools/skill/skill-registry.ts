@@ -1,8 +1,8 @@
 /**
- * Skill registry — scans `{CODEDIR}/skills/` for subdirectories containing
- * `SKILL.md` files, parses YAML frontmatter, and provides lookup by name.
- * Used by the prompt builder to describe available skills and by the
- * `load_skill` tool to retrieve full skill text.
+ * Skill registry — scans `{CODEDIR}/skills/` and `.agents/skills/` for
+ * subdirectories containing `SKILL.md` files, parses YAML frontmatter, and
+ * provides lookup by name. Used by the prompt builder to describe available
+ * skills and by the `load_skill` tool to retrieve full skill text.
  *
  * Exports:
  * - `SkillManifest` — interface: name, description, file path
@@ -16,6 +16,7 @@
  */
 import { readFileSync, existsSync, readdirSync, statSync } from "fs";
 import { join } from "path";
+import { cwd } from "process";
 import { CODEDIR } from "../../../utils/constants.js";
 
 export interface SkillManifest {
@@ -31,19 +32,28 @@ export interface SkillDocument {
 
 export class SkillRegistry {
   private documents: Record<string, SkillDocument> = {};
-  private skillsDir: string;
+  private skillsDirs: string[];
 
-  constructor(skillsDir?: string) {
-    this.skillsDir = skillsDir ?? join(CODEDIR, "skills");
+  constructor(skillsDirs?: string | string[]) {
+    if (typeof skillsDirs === "string") {
+      this.skillsDirs = [skillsDirs];
+    } else if (Array.isArray(skillsDirs)) {
+      this.skillsDirs = skillsDirs;
+    } else {
+      this.skillsDirs = [
+        join(CODEDIR, "skills"),
+        join(cwd(), ".agents", "skills"),
+      ];
+    }
     this.loadAll();
   }
 
   private loadAll(): void {
-    const dir = this.skillsDir;
-    if (!existsSync(dir)) {
-      return;
+    for (const dir of this.skillsDirs) {
+      if (existsSync(dir)) {
+        this.scanDir(dir);
+      }
     }
-    this.scanDir(dir);
   }
 
   private scanDir(dir: string): void {
