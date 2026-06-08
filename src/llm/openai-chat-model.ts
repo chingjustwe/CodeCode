@@ -146,6 +146,7 @@ export class OpenAIChatModel implements ChatModel {
     interface OpenAIChoice {
       message: {
         content: string | null;
+        reasoning_content?: string | null;
         tool_calls?: Array<{
           id: string;
           type: string;
@@ -171,6 +172,7 @@ export class OpenAIChatModel implements ChatModel {
     }
 
     const content = choice.message.content || ' ';
+    const reasoningContent = choice.message.reasoning_content || undefined;
     const toolCalls = this.parseToolCalls(choice.message.tool_calls);
 
     let usage: TokenUsage | undefined;
@@ -186,6 +188,7 @@ export class OpenAIChatModel implements ChatModel {
       message: new AIMessage(content),
       toolCalls,
       usage,
+      reasoningContent,
     };
   }
 }

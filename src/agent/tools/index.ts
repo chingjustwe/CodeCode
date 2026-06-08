@@ -17,6 +17,7 @@ import { WriteTool } from "./write.js";
 import { EditTool } from "./edit.js";
 import { LoadSkillTool } from "./skill/load-skill.js";
 import { TodoTool } from "./todo/todo-tool.js";
+import { SaveMemoryTool } from "./memory/save-memory-tool.js";
 
 export { CalculateTool } from "./calculate.js";
 export { BashTool } from "./bash.js";
@@ -25,6 +26,7 @@ export { WriteTool } from "./write.js";
 export { EditTool } from "./edit.js";
 export { LoadSkillTool } from "./skill/load-skill.js";
 export { TodoTool } from "./todo/todo-tool.js";
+export { SaveMemoryTool } from "./memory/save-memory-tool.js";
 
 const builtinTools = [
   new CalculateTool(),
@@ -34,6 +36,7 @@ const builtinTools = [
   new EditTool(),
   new LoadSkillTool(),
   new TodoTool(),
+  new SaveMemoryTool(),
 ];
 
 for (const tool of builtinTools) {

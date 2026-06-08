@@ -95,6 +95,7 @@ export interface ChatCompletionResult {
   message: AIMessage;
   toolCalls: ToolCall[];
   usage?: TokenUsage;
+  reasoningContent?: string;
 }
 
 /**

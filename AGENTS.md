@@ -99,7 +99,8 @@ Barrel (re-export) files should have a comment listing what they re-export from,
 ### Env vars
 
 | Var | Purpose |
-|---|---|
+|---|---|---|
+| `CODEDIR` | CodeCode working/config directory (default `.codecode`) |
 | `LLM_PROVIDER` | Selects the provider (default `anthropic`) |
 | `LLM_MODEL` | Overrides the default model name |
 | `LLM_CONTEXT_WINDOW` | Overrides context window size for token % display |
@@ -111,11 +112,14 @@ Barrel (re-export) files should have a comment listing what they re-export from,
 
 - **Provider dispatch**: by `apiFramework` field (`"openai"` | `"anthropic"`), not by provider name. Adding a provider config in `src/llm/providers.ts` is enough — no new class needed if framework is already supported.
 - **Tool definition**: each entry in `src/agent/tools/` has a JSON Schema `definition` + runtime `fn`. Tools reachable from `getToolDefinitions()` / the `tools` record. Tools are organized by category — e.g. `src/agent/tools/todo/` contains both `todo.ts` (manager) and `todo-tool.ts` (tool class).
-- **Skill system**: skills live at `.agents/skills/<name>/SKILL.md`. Optional YAML frontmatter (`name:`, `description:`). Loaded by `SkillRegistry` at startup — subdirs without `SKILL.md` are ignored.
+- **CODEDIR**: `src/utils/constants.ts` exports `CODEDIR` — the working/config directory path (default `.codecode/`, customizable via `CODEDIR` env var). Skills, transcripts, and persisted tool outputs live under this directory.
+- **Skill system**: skills live at `{CODEDIR}/skills/<name>/SKILL.md` or `.agents/skills/<name>/SKILL.md`. Both directories are scanned by `SkillRegistry` at startup — subdirs without `SKILL.md` are ignored.
 - **Agent loop** (`src/agent/loop.ts`): max 20 iterations, 8096 max_tokens per call. Tool results fed back as `HumanMessage` (no `ToolMessage` type used — matches OpenAI's user-message convention). After each turn, accumulated token usage (input + output + % of context window) is printed to console.
-- **System prompt** (`src/agent/prompt.ts`): dynamically includes available skill descriptions. Not a static string.
-- **Context compression** (`src/agent/compact/index.ts`): three-layer compression applied via `CompactListener` (registered in `src/index.ts` as a loop listener). Layer 1 (`onBeforeToolResult`) writes large tool outputs (>4 KB) to `.task_outputs/tool-results/` with a preview in context. Layer 2 (`onRoundStart`) replaces all but the last 3 tool-result messages with `[Earlier tool result omitted for brevity]` at the start of each round. Layer 3 (used by `/compact`) produces an LLM continuity summary that replaces the full history. The output dirs are gitignored by default.
+- **System prompt** (`src/agent/prompt.ts`): dynamically includes available skill descriptions and persistent memories. Includes `MEMORY_GUIDANCE` text that tells the agent when to call `save_memory`.
+- **Context compression** (`src/agent/compact/index.ts`): three-layer compression applied via `CompactListener` (registered in `src/index.ts` as a loop listener). Layer 1 (`onBeforeToolResult`) writes large tool outputs (>4 KB) to `{CODEDIR}/tool-results/` with a preview in context. Layer 2 (`onRoundStart`) replaces all but the last 3 tool-result messages with `[Earlier tool result omitted for brevity]` at the start of each round. Layer 3 (used by `/compact`) produces an LLM continuity summary that replaces the full history. The output dirs are gitignored by default.
+- **Memory system** (`src/memory/memory-manager.ts`): stores persistent memories across sessions. Four types: `user` (preferences), `feedback` (corrections), `project` (non-obvious project facts), `reference` (external resource URLs). Each memory is a Markdown file with YAML frontmatter under `{CODEDIR}/memory/`. The `save_memory` tool (registered in `src/agent/tools/memory/save-memory-tool.ts`) lets the LLM persist a memory mid-conversation. At startup, `memoryManager.loadAll()` loads existing memories, and `buildSystemPrompt()` injects them into the system prompt on every agent loop invocation.
 - **File sandboxing**: `safePath()` in `src/utils/file-utils.ts` resolves paths relative to `cwd()` and rejects traversal (`../../etc`).
+- **Permission system** (`src/agent/permission-manager.ts`): checks tool calls against deny rules before execution. Registered as a `LoopListener` in `src/index.ts`. The `onBeforeToolCall` hook fires before each tool invocation; if a rule matches, the tool is skipped and a denial message is fed back to the LLM. `ask` mode is reserved for future subagent-based approval. Default rules block `sudo`, destructive commands (`rm -rf /`, `dd`, `mkfs*`, `shutdown`), network commands (`wget`, `curl`, `ssh`, `scp`), user/group management, and writes to `/etc/*`.
 
 ## Quirks & gotchas
 

@@ -90,6 +90,7 @@ export class AnthropicChatModel implements ChatModel {
       id?: string;
       name?: string;
       input?: Record<string, unknown>;
+      thinking?: string;
     }>;
     stop_reason?: string;
     usage?: {
@@ -100,6 +101,10 @@ export class AnthropicChatModel implements ChatModel {
     // Extract text content
     const textBlocks = data.content.filter((c) => c.type === "text");
     const textContent = textBlocks.map((b) => b.text || " ").join("");
+
+    // Extract thinking/reasoning content (type: "thinking")
+    const thinkingBlock = data.content.find((c) => c.type === "thinking");
+    const reasoningContent = thinkingBlock?.thinking;
 
     // Extract tool calls
     const toolCalls: ToolCall[] = data.content
@@ -123,6 +128,7 @@ export class AnthropicChatModel implements ChatModel {
       message: new AIMessage(textContent),
       toolCalls,
       usage,
+      reasoningContent,
     };
   }
 
@@ -184,6 +190,7 @@ export class AnthropicChatModel implements ChatModel {
         id?: string;
         name?: string;
         input?: Record<string, unknown>;
+        thinking?: string;
       }>;
       stop_reason?: string;
       usage?: {

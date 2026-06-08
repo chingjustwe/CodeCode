@@ -34,10 +34,12 @@ import { registerLoopListener } from "./agent/hooks.js";
 import { todoManager } from "./agent/tools/todo/todo.js";
 import { compactListener } from "./agent/compact/compact-listener.js";
 import { permissionManager } from "./agent/permission-manager.js";
+import { memoryManager } from "./agent/tools/memory/memory-manager.js";
 import { usageTracker } from "./agent/hooks/usage-hook.js";
 
 // ─── Bootstrap ─────────────────────────────────────────────────────────────
 
+memoryManager.loadAll();
 const model = createModel();
 
 registerLoopListener(todoManager);
