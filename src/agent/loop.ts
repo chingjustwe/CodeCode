@@ -16,25 +16,21 @@
  * - `../types/index.ts` — ChatModel, AgentResult, Tool types
  */
 import { HumanMessage, AIMessage, BaseMessage } from "../types/messages.js";
-import { AgentResult, ChatModel, TokenUsage } from "../types/index.js";
+import { AgentResult, ChatModel } from "../types/index.js";
 import { buildSystemPrompt } from "./prompt.js";
 import { ToolRegistry } from "./tools/tool-registry.js";
 import {
   fireRoundStartHooks,
+  fireAfterModelInvokeHooks,
   applyBeforeToolResultHooks,
   fireBeforeToolCallHooks,
   fireRoundEndHooks,
+  fireLoopEndHooks,
 } from "./hooks.js";
-import type { ToolCallInfo } from "./hooks.js";
+import type { ToolCallInfo, RoundContext } from "./hooks.js";
 
 const MAX_ITERATIONS = 20;
 const MAX_TOKENS = 8096;
-
-function formatTokenInfo(usage: TokenUsage, contextWindow: number): string {
-  const pct = ((usage.totalTokens / contextWindow) * 100).toFixed(1);
-  const ctxLabel = contextWindow >= 1000 ? `${(contextWindow / 1000).toFixed(0)}K` : String(contextWindow);
-  return `📊 Tokens: ${usage.inputTokens.toLocaleString()} in + ${usage.outputTokens.toLocaleString()} out = ${usage.totalTokens.toLocaleString()} total (${pct}% of ${ctxLabel})`;
-}
 
 export async function agentLoop(
   userInput: string,
@@ -52,10 +48,10 @@ export async function agentLoop(
 
   console.log(`\n🤔 User: ${userInput}`);
 
-  let totalUsage: TokenUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+  let ctx: RoundContext = { roundIndex: 0, maxRounds: MAX_ITERATIONS, messageCount: messages.length, messages, contextWindow: model.contextWindow };
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
-    const ctx = { roundIndex: i, maxRounds: MAX_ITERATIONS, messageCount: messages.length, messages };
+    ctx = { roundIndex: i, maxRounds: MAX_ITERATIONS, messageCount: messages.length, messages, contextWindow: model.contextWindow };
 
     fireRoundStartHooks(ctx, messages);
 
@@ -66,20 +62,14 @@ export async function agentLoop(
       maxTokens: MAX_TOKENS,
     });
 
-    if (result.usage) {
-      totalUsage.inputTokens += result.usage.inputTokens;
-      totalUsage.outputTokens += result.usage.outputTokens;
-      totalUsage.totalTokens += result.usage.totalTokens;
-    }
+    fireAfterModelInvokeHooks(result.usage);
 
     const content = result.message.content;
 
     if (result.toolCalls.length === 0) {
       console.log(`\n🤖 Assistant Final Answer: ${content}\n`);
 
-      if (totalUsage.totalTokens > 0) {
-        console.log(`  ${formatTokenInfo(totalUsage, model.contextWindow)}\n`);
-      }
+      fireLoopEndHooks(ctx);
 
       messageHistory.push(new HumanMessage(userInput));
       messageHistory.push(new AIMessage(content));
@@ -138,9 +128,7 @@ export async function agentLoop(
   }
 
   console.log("⚠️  Max iterations reached. Ending loop.");
-  if (totalUsage.totalTokens > 0) {
-    console.log(`  ${formatTokenInfo(totalUsage, model.contextWindow)}\n`);
-  }
+  fireLoopEndHooks(ctx);
   return {
     answer: "Sorry, I couldn't complete the task in time.",
     history: messageHistory,

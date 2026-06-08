@@ -1,7 +1,7 @@
 /**
  * Hooks / listener system for the agent loop. Allows external modules
- * (e.g. TodoManager, CompactListener) to observe and inject into each
- * round of the agent's reasoning loop.
+ * (e.g. TodoManager, CompactListener, UsageTracker) to observe and inject
+ * into each round of the agent's reasoning loop.
  *
  * Exports:
  * - `RoundContext` — context passed to listeners on each round
@@ -9,14 +9,17 @@
  * - `LoopListener` — interface; implement to observe round start/end/tool results
  * - `registerLoopListener(l)` — register a listener singleton
  * - `getLoopListeners()` — retrieve all registered listeners
+ * - `fireAfterModelInvokeHooks(usage)` — dispatch usage data to listeners
  */
 import { BaseMessage, HumanMessage } from "../types/messages.js";
+import type { TokenUsage } from "../types/index.js";
 
 export interface RoundContext {
   roundIndex: number;
   maxRounds: number;
   messageCount: number;
   messages: BaseMessage[];
+  contextWindow: number;
 }
 
 export interface ToolCallInfo {
@@ -31,9 +34,11 @@ export interface BeforeToolCallResult {
 
 export interface LoopListener {
   onRoundStart?(ctx: RoundContext): string | null;
+  onAfterModelInvoke?(usage: TokenUsage): void;
   onBeforeToolResult?(toolCallId: string, toolName: string, observation: string): string;
   onBeforeToolCall?(toolName: string, args: Record<string, unknown>): BeforeToolCallResult | null | Promise<BeforeToolCallResult | null>;
   onRoundEnd?(ctx: RoundContext, toolCalls: ToolCallInfo[]): void;
+  onLoopEnd?(ctx: RoundContext): void;
 }
 
 const listeners: LoopListener[] = [];
@@ -44,6 +49,14 @@ export function registerLoopListener(listener: LoopListener): void {
 
 export function getLoopListeners(): LoopListener[] {
   return listeners;
+}
+
+/** Run all onAfterModelInvoke hooks with per-round usage data. */
+export function fireAfterModelInvokeHooks(usage: TokenUsage | undefined): void {
+  if (!usage) return;
+  for (const listener of listeners) {
+    listener.onAfterModelInvoke?.(usage);
+  }
 }
 
 /** Run all onRoundStart hooks and return any injections as HumanMessages. */
@@ -93,5 +106,12 @@ export async function fireBeforeToolCallHooks(
 export function fireRoundEndHooks(ctx: RoundContext, toolCalls: ToolCallInfo[]): void {
   for (const listener of listeners) {
     listener.onRoundEnd?.(ctx, toolCalls);
+  }
+}
+
+/** Run all onLoopEnd hooks (loop terminating normally or via limit). */
+export function fireLoopEndHooks(ctx: RoundContext): void {
+  for (const listener of listeners) {
+    listener.onLoopEnd?.(ctx);
   }
 }
