@@ -1,6 +1,6 @@
 # CodeCode — Agent Instructions
 
-TypeScript 6.0 / ES modules / zero-runtime-dep (dotenv only).  
+TypeScript 6.0 / ES modules / minimal runtime deps (dotenv + js-yaml).  
 Entry: `src/index.ts` → `createModel()` → `startRepl()` → `agentLoop()`.
 
 ## Code Commenting Rules (MUST follow)
@@ -87,6 +87,7 @@ Barrel (re-export) files should have a comment listing what they re-export from,
 | `npm run minimax` | Same pattern for MiniMax |
 | `npm run kimi` | Same pattern for Kimi |
 | `npm run glm` | Same pattern for GLM |
+| `npm run openrouter` | `LLM_PROVIDER=openrouter npx tsx src/index.ts` (requires `codecode.yml`) |
 | `npm run typecheck` | `tsc --noEmit` — the **only** verification (no tests, no linter, no formatter) |
 | `npm run build` | `tsc` → `dist/` |
 
@@ -95,6 +96,13 @@ Barrel (re-export) files should have a comment listing what they re-export from,
 1. `cp .env.example .env`
 2. Add API key(s). `LLM_PROVIDER` selects the provider (default `anthropic`).
 3. `npm install && npm start`
+
+### Config file (`codecode.yml`)
+
+An optional YAML config file can be placed in the project root (or `{CODEDIR}/codecode.yml`).
+Providers defined there are merged into the built-in provider list — no code changes needed
+to add a new provider. If a YAML provider name matches a built-in one, the YAML config wins
+(useful for overriding endpoints for self-hosted services like Ollama/vLLM).
 
 ### Env vars
 
@@ -110,7 +118,8 @@ Barrel (re-export) files should have a comment listing what they re-export from,
 
 ## Architecture (not obvious from filenames)
 
-- **Provider dispatch**: by `apiFramework` field (`"openai"` | `"anthropic"`), not by provider name. Adding a provider config in `src/llm/providers.ts` is enough — no new class needed if framework is already supported.
+- **Provider dispatch**: by `apiFramework` field (`"openai"` | `"anthropic"`), not by provider name. Adding a provider config in `src/llm/providers.ts` or via `codecode.yml` is enough — no new class needed if framework is already supported.
+- **YAML config** (`src/config/config-loader.ts`): loads `codecode.yml` at startup, merges YAML-defined providers into the built-in `PROVIDERS` record. The `buildProviderRecord()` function in `src/llm/providers.ts` calls `loadConfig()` at module init time.
 - **Tool definition**: each entry in `src/agent/tools/` has a JSON Schema `definition` + runtime `fn`. Tools reachable from `getToolDefinitions()` / the `tools` record. Tools are organized by category — e.g. `src/agent/tools/todo/` contains both `todo.ts` (manager) and `todo-tool.ts` (tool class).
 - **CODEDIR**: `src/utils/constants.ts` exports `CODEDIR` — the working/config directory path (default `.codecode/`, customizable via `CODEDIR` env var). Skills, transcripts, and persisted tool outputs live under this directory.
 - **Skill system**: skills live at `{CODEDIR}/skills/<name>/SKILL.md` or `.agents/skills/<name>/SKILL.md`. Both directories are scanned by `SkillRegistry` at startup — subdirs without `SKILL.md` are ignored.
@@ -152,7 +161,30 @@ and restricted toolset; only the final summary is returned.
 
 ## Adding a Provider
 
-Add an entry to `src/llm/providers.ts` specifying `endpoint`, `defaultModel`, `envKey`, and `apiFramework` (`"openai"` or `"anthropic"`). Set `{NAME}_API_KEY` in `.env`, then run with `LLM_PROVIDER=<name> npm start`.
+There are two ways to add a provider:
+
+### Via YAML config (recommended)
+
+Add an entry under `providers:` in `codecode.yml` (create one if it doesn't exist).
+No code changes needed. Example:
+
+```yaml
+providers:
+  openrouter:
+    endpoint: https://openrouter.ai/api/v1
+    defaultModel: google/gemini-2.5-pro-exp-03-25:free
+    envKey: OPENROUTER_API_KEY
+    apiFramework: openai
+    contextWindow: 128000
+```
+
+Set `{NAME}_API_KEY` in `.env` (or use `LLM_API_KEY` as a fallback),
+then run with `LLM_PROVIDER=<name> npm start`.
+
+### Via code (for complex providers)
+
+Add an entry to `src/llm/providers.ts` specifying `endpoint`, `defaultModel`, `envKey`,
+and `apiFramework` (`"openai"` or `"anthropic"`). Same env var + startup procedure.
 
 ## Adding a Tool
 

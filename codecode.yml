@@ -1,0 +1,18 @@
+# ── CodeCode Configuration ─────────────────────────────────────────
+# This file is optional. If it doesn't exist, CodeCode runs with
+# built-in providers only.
+#
+# Providers defined here are merged into the built-in provider list.
+# If a provider name here matches a built-in one, this config wins
+# (useful for overriding endpoints for self-hosted services).
+#
+# Built-in providers (no config needed):
+#   anthropic, claude, openai, deepseek, minimax, kimi, glm
+
+providers:
+  openrouter:
+    endpoint: https://openrouter.ai/api/v1
+    defaultModel: google/gemini-2.5-pro-exp-03-25:free
+    envKey: OPENROUTER_API_KEY
+    apiFramework: openai
+    contextWindow: 128000

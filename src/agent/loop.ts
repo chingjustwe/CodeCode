@@ -1,33 +1,39 @@
 /**
  * Core agent reasoning loop. Iterates up to MAX_ITERATIONS rounds, each
- * time: building context from message history, invoking the LLM, handling
- * any tool calls, and feeding results back as HumanMessages. Ends when the
- * model responds without tool calls or when the iteration limit is reached.
+ * time: building context from message history, invoking the LLM with
+ * streaming output, handling any tool calls, and feeding results back as
+ * HumanMessages. Ends when the model responds without tool calls or when
+ * the iteration limit is reached.
  *
  * Exports:
  * - `agentLoop(userInput, model, toolsRegistry, messageHistory?)` — main entry point
  *   Returns `AgentResult` with `answer` and `history`.
+ *
+ * Streaming:
+ *   Uses `model.invokeStream()` for character-by-character output display.
+ *   Reasoning content (e.g. DeepSeek R1 thinking) is printed as it arrives.
+ *   Tool calls are accumulated during streaming and processed in the loop body.
  *
  * Dependencies:
  * - `./prompt.ts` — builds the system prompt (includes skill descriptions)
  * - `./tools/tool-registry.ts` — tool lookup by name
  * - `./hooks.ts` — LoopListener lifecycle hooks
  * - `../types/messages.ts` — BaseMessage / HumanMessage / AIMessage
- * - `../types/index.ts` — ChatModel, AgentResult, Tool types
+ * - `../types/index.ts` — ChatModel, AgentResult, StreamChunk, Tool types
  */
-import { HumanMessage, AIMessage, BaseMessage } from "../types/messages.js";
-import { AgentResult, ChatModel, ToolCall } from "../types/index.js";
+import { AgentResult, ChatModel, StreamChunk, ToolCall } from "../types/index.js";
+import { AIMessage, BaseMessage, HumanMessage } from "../types/messages.js";
+import type { RoundContext, ToolCallInfo } from "./hooks.js";
+import {
+  applyBeforeToolResultHooks,
+  fireAfterModelInvokeHooks,
+  fireBeforeToolCallHooks,
+  fireLoopEndHooks,
+  fireRoundEndHooks,
+  fireRoundStartHooks
+} from "./hooks.js";
 import { buildSystemPrompt } from "./prompt.js";
 import { ToolRegistry } from "./tools/tool-registry.js";
-import {
-  fireRoundStartHooks,
-  fireAfterModelInvokeHooks,
-  applyBeforeToolResultHooks,
-  fireBeforeToolCallHooks,
-  fireRoundEndHooks,
-  fireLoopEndHooks,
-} from "./hooks.js";
-import type { ToolCallInfo, RoundContext } from "./hooks.js";
 
 const MAX_ITERATIONS = 20;
 const MAX_TOKENS = 8096;
@@ -108,25 +114,65 @@ export async function agentLoop(
 
     fireRoundStartHooks(ctx, messages);
 
-    const result = await model.invoke({
+    // --- Streaming invocation ---
+    const streamGen = model.invokeStream({
       system: systemPrompt,
       messages,
       tools: toolDefs,
       maxTokens: MAX_TOKENS,
     });
 
-    fireAfterModelInvokeHooks(result.usage);
+    // Accumulated state across stream chunks
+    let accumulatedText = "";
+    let toolCalls: ToolCall[] = [];
+    let usage: import("../types/index.js").TokenUsage | undefined;
+    let hasReasoning = false;
+    let hasText = false;
 
-    const content = result.message.content;
+    // Drive the async generator manually to capture the return value
+    const iterator = streamGen[Symbol.asyncIterator]();
+    let nextResult = await iterator.next();
 
-    if (result.reasoningContent) {
-      console.log(`\n🧠 Reasoning:\n${result.reasoningContent}\n`);
+    while (!nextResult.done) {
+      const chunk: StreamChunk = nextResult.value;
+
+      if (chunk.type === "reasoning" && chunk.delta) {
+        if (!hasReasoning) {
+          process.stdout.write("\n🧠 Reasoning:\n");
+          hasReasoning = true;
+        }
+        process.stdout.write(chunk.delta);
+      } else if (chunk.type === "text" && chunk.delta) {
+        if (!hasText) {
+          process.stdout.write("\n🤖 Assistant: ");
+          hasText = true;
+        }
+        process.stdout.write(chunk.delta);
+        accumulatedText += chunk.delta;
+      } else if (chunk.type === "tool_call" && chunk.toolCalls) {
+        toolCalls = chunk.toolCalls;
+        if (chunk.delta) {
+          accumulatedText = chunk.delta;
+        }
+      } else if (chunk.type === "done" && chunk.usage) {
+        usage = chunk.usage;
+      }
+
+      nextResult = await iterator.next();
     }
 
-    // If no tool calls, we're done
-    if (result.toolCalls.length === 0) {
-      console.log(`\n🤖 Assistant: ${content}\n`);
+    // Print trailing newline if we output anything
+    if (hasText || hasReasoning) {
+      process.stdout.write("\n");
+    }
 
+    // Fire usage hook after the stream completes
+    fireAfterModelInvokeHooks(usage);
+
+    const content = accumulatedText || ' ';
+
+    // No tool calls → we're done
+    if (toolCalls.length === 0) {
       fireLoopEndHooks(ctx);
 
       messageHistory.push(new HumanMessage(userInput));
@@ -134,9 +180,10 @@ export async function agentLoop(
       return { answer: content, history: messageHistory };
     }
 
-    messages.push(result.message);
+    // Tool calls present → add assistant message and process tools
+    messages.push(new AIMessage(content));
 
-    const { toolCallInfos, toolMessages } = await processToolCalls(result.toolCalls, toolsRegistry);
+    const { toolCallInfos, toolMessages } = await processToolCalls(toolCalls, toolsRegistry);
     messages.push(...toolMessages);
 
     fireRoundEndHooks(ctx, toolCallInfos);

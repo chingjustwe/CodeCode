@@ -11,6 +11,7 @@
     "deepseek": "LLM_PROVIDER=deepseek npx tsx src/index.ts",
     "kimi": "LLM_PROVIDER=kimi npx tsx src/index.ts",
     "glm": "LLM_PROVIDER=glm npx tsx src/index.ts",
+    "openrouter": "LLM_PROVIDER=openrouter npx tsx src/index.ts",
     "build": "npx tsc",
     "typecheck": "npx tsc --noEmit"
   },
@@ -29,9 +30,11 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "js-yaml": "^4.2.0"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.9.1",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3"

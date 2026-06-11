@@ -9,6 +9,7 @@
  *
  * Used by: `src/llm/factory.ts` to instantiate the correct ChatModel
  */
+import { loadConfig } from "../config/config-loader.js";
 import { ProviderConfig } from "../types/index.js";
 
 /**
@@ -20,7 +21,8 @@ import { ProviderConfig } from "../types/index.js";
  *   - openai:  POST /v1/chat/completions
  *   - anthropic: POST /v1/messages
  */
-export const PROVIDERS: Record<string, ProviderConfig> = {
+/** Built-in providers — always available, no config file needed */
+const BUILT_IN_PROVIDERS: Record<string, ProviderConfig> = {
   openai: {
     endpoint: "https://api.openai.com/v1",
     defaultModel: "gpt-4o-mini",
@@ -75,6 +77,33 @@ export const PROVIDERS: Record<string, ProviderConfig> = {
     contextWindow: 200000,
   },
 };
+
+/**
+ * Merged provider record — built-in providers + any YAML-defined providers.
+ * YAML providers override built-ins with the same name (allows overriding
+ * endpoints for self-hosted services like Ollama/vLLM).
+ */
+export const PROVIDERS: Record<string, ProviderConfig> = buildProviderRecord();
+
+function buildProviderRecord(): Record<string, ProviderConfig> {
+  const merged = { ...BUILT_IN_PROVIDERS };
+
+  const config = loadConfig();
+  if (config?.providers) {
+    for (const [name, provider] of Object.entries(config.providers)) {
+      merged[name] = {
+        endpoint: provider.endpoint,
+        defaultModel: provider.defaultModel,
+        envKey: provider.envKey,
+        apiFramework: provider.apiFramework,
+        temperature: provider.temperature,
+        contextWindow: provider.contextWindow,
+      };
+    }
+  }
+
+  return merged;
+}
 
 /** Return the list of registered provider names */
 export function listProviders(): string[] {
