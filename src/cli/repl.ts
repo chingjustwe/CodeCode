@@ -10,6 +10,7 @@
  * - `src/agent/commands/command-registry.ts` — slash command dispatch
  * - `src/agent/tools/tool-registry.ts` — available tools
  * - `src/llm/factory.ts` — `printAvailableProviders()` for startup banner
+ * - `src/session/session-manager.ts` — session persistence
  */
 import * as readline from "node:readline/promises";
 import "dotenv/config";
@@ -20,6 +21,7 @@ import { ToolRegistry } from "../agent/tools/tool-registry.js";
 import { commandRegistry } from "../agent/commands/command-registry.js";
 import { printAvailableProviders } from "../llm/factory.js";
 import { historyRef } from "../agent/history-ref.js";
+import { sessionManager } from "../session/session-manager.js";
 
 const rl = readline.createInterface({ input, output });
 
@@ -62,15 +64,24 @@ export async function startRepl(
   console.log("╚════════════════════════════════════════════════════╝");
 
   historyRef.current = [];
+  const sessionId = sessionManager.createNew();
+  console.log(`  📝 Session: ${sessionId}`);
 
   while (true) {
     const userInput = await rl.question("\nYou: ");
-    if (userInput.toLowerCase() === "exit") break;
+    if (userInput.toLowerCase() === "exit") {
+      sessionManager.saveCurrent(historyRef.current);
+      break;
+    }
 
-    if (await handleCommand(userInput)) continue;
+    if (await handleCommand(userInput)) {
+      sessionManager.saveCurrent(historyRef.current);
+      continue;
+    }
 
     const result = await agentLoop(userInput, model, tools, historyRef.current);
     historyRef.current = result.history;
+    sessionManager.saveCurrent(historyRef.current);
   }
 
   rl.close();

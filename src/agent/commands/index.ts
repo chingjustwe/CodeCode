@@ -18,17 +18,23 @@ import { HelpCommand } from "./help.js";
 import { CompactCommand } from "./compact.js";
 import { ListPermRuleCommand } from "./list-perm-rule.js";
 import { PromptCommand } from "./prompt.js";
+import { NewSessionCommand } from "./new-session.js";
+import { ListSessionsCommand } from "./list-sessions.js";
 
 export { HelpCommand } from "./help.js";
 export { CompactCommand } from "./compact.js";
 export { ListPermRuleCommand } from "./list-perm-rule.js";
 export { PromptCommand } from "./prompt.js";
+export { NewSessionCommand } from "./new-session.js";
+export { ListSessionsCommand } from "./list-sessions.js";
 
 const builtinCommands = [
   new HelpCommand(),
   new CompactCommand(),
   new ListPermRuleCommand(),
   new PromptCommand(),
+  new NewSessionCommand(),
+  new ListSessionsCommand(),
 ];
 
 for (const cmd of builtinCommands) {
